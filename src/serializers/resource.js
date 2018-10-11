@@ -42,14 +42,11 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
   this.perform = function () {
     var typeForAttributes = {};
 
-    function getRelatedLinkForBelongsTo(modelName, idField) {
-      return function (record, current) {
-        return `/forest/${modelName}/${current[idField]}`;
-      };
-    }
-
     function getRelatedLinkForHasMany(modelName, relationshipName, idField) {
       return function (record, current, parent) {
+        if (current && current[relationshipName]) {
+          return null;
+        }
         return `/forest/${modelName}/${parent[idField]}/relationships/${relationshipName}`;
       };
     }
@@ -88,7 +85,7 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
               attributes: getFieldsNames(field.type.fields)
             };
 
-            getAttributesFor(dest[field.field], field.type.fields);
+            getAttributesFor(dest[field.field], field.type.fields, include);
           } else if (field.reference) {
             const referenceType = field.reference.split('.')[0];
             const referenceSchema = Schemas.schemas[referenceType];
@@ -106,28 +103,23 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
               detectFieldWithSpecialFormat(field, fieldName);
             });
 
+            const modelName = Implementation.getModelName(model);
+            const relatedFunction = field.relationship === 'BelongsTo'
+              ? null
+              : getRelatedLinkForHasMany(modelName, field.field, schema.idField);
             dest[fieldName] = {
               ref: fieldReference,
               nullIfMissing: true,
-            };
-            if (!include) {
-              const modelName = Implementation.getModelName(model);
-              const [referenceModelName,] = field.reference.split('.');
-              const relatedFunction = field.relationship === 'BelongsTo'
-                ? getRelatedLinkForBelongsTo(referenceModelName, referenceSchema.idField)
-                : getRelatedLinkForHasMany(modelName, field.field, schema.idField);
-
-              dest[fieldName].relationshipLinks = {
+              attributes: getFieldsNames(referenceSchema.fields),
+              relationshipLinks: {
                 related: relatedFunction,
-              };
-            } else {
-              dest[fieldName].attributes = getFieldsNames(referenceSchema.fields);
-            }
+              },
+            };
 
             if (_.isArray(field.type) || !include) {
               dest[fieldName].ignoreRelationshipData = include;
               dest[fieldName].included = false;
-            } else {
+            } else if (include) {
               const referenceFields = referenceSchema.fields.filter(field => field.reference);
               getAttributesFor(dest[fieldName], referenceFields, false);
             }
@@ -166,7 +158,7 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
       });
     }
 
-    function defineRelationshipId(records, fields) {
+    function defineRelationshipId(records, fields, goDeeper = true) {
       const recordArray = _.isArray(records) ? records : [records];
       recordArray.forEach((record) => {
         fields.forEach((field) => {
@@ -177,8 +169,8 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
           const fieldName = field.field;
           const [referenceType,referenceKey] = field.reference.split('.');
           const referenceSchema = Schemas.schemas[referenceType];
-          if (record[fieldName]) {
-            defineRelationshipId(record[fieldName], referenceSchema.fields);
+          if (goDeeper && record[fieldName]) {
+            defineRelationshipId(record[fieldName], referenceSchema.fields, false);
           }
 
           if (field.relationship === 'BelongsTo') {
@@ -194,7 +186,7 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
       });
     }
 
-    var serializationOptions = {
+    const serializationOptions = {
       id: schema.idField,
       attributes: getFieldsNames(schema.fields),
       keyForAttribute: function (key) { return key; },
@@ -217,7 +209,7 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
 
     return new P(function (resolve) {
       if (_.isArray(records)) {
-        var smartFieldsValuesInjector;
+        let smartFieldsValuesInjector;
         resolve(P
           .map(records, function (record) {
             smartFieldsValuesInjector =
@@ -235,7 +227,7 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
       }
     })
       .then(function () {
-        var decorators = null;
+        let decorators = null;
         if (searchValue) {
           decorators = Implementation.RecordsDecorator.decorateForSearch(
             records,
