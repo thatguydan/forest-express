@@ -1,6 +1,8 @@
 # Change Log
 
 ## [Unreleased]
+### Fixed
+- Smart Views - Smart views can access nested relationship.
 
 ## RELEASE 2.15.1 - 2018-09-24
 ### Changed
