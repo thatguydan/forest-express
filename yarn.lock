@@ -2677,9 +2677,9 @@ json5@^0.5.1:
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/json5/-/json5-0.5.1.tgz#1eade7acc012034ad84e2396767ead9fa5495821"
 
-jsonapi-serializer@3.6.0:
-  version "3.6.0"
-  resolved "https://registry.yarnpkg.com/jsonapi-serializer/-/jsonapi-serializer-3.6.0.tgz#6c14d70efcd229871a7ef82e21df513dd5b2f77b"
+jsonapi-serializer@3.6.1:
+  version "3.6.1"
+  resolved "https://registry.yarnpkg.com/jsonapi-serializer/-/jsonapi-serializer-3.6.1.tgz#e33baa53bcb25a876507dab50db8ef4ebfbe4d9a"
   dependencies:
     inflected "^1.1.6"
     lodash "^4.16.3"
