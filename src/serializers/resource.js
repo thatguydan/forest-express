@@ -42,12 +42,12 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
   this.perform = function () {
     var typeForAttributes = {};
 
-    function getRelatedLinkForHasMany(modelName, relationshipName, idField) {
+    function getRelatedLinkForHasMany(modelName, relationshipName) {
       return function (record, current, parent) {
         if (current && current[relationshipName]) {
           return null;
         }
-        return `/forest/${modelName}/${parent[idField]}/relationships/${relationshipName}`;
+        return `/forest/${modelName}/${parent.id}/relationships/${relationshipName}`;
       };
     }
 
@@ -106,7 +106,7 @@ function ResourceSerializer(Implementation, model, records, integrator, opts, me
             const modelName = Implementation.getModelName(model);
             const relatedFunction = field.relationship === 'BelongsTo'
               ? null
-              : getRelatedLinkForHasMany(modelName, field.field, schema.idField);
+              : getRelatedLinkForHasMany(modelName, field.field);
             dest[fieldName] = {
               ref: fieldReference,
               nullIfMissing: true,
